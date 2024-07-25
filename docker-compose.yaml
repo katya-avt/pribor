@@ -1,0 +1,70 @@
+version: "3.8"
+
+services:
+
+  app:
+    image: "nginx:stable-alpine"
+    ports:
+      - "8000:80"
+    volumes:
+      - ./_docker/nginx/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./:/var/www/pribor
+    depends_on:
+      - mysql
+      - mysql_testing
+      - php
+      - node
+    container_name: pribor_app
+
+  php:
+    build:
+      context: .
+      dockerfile: _docker/dockerfiles/php.Dockerfile
+    volumes:
+      - ./:/var/www/pribor
+
+  mysql:
+    image: mysql:8.0
+    ports:
+      - "3306:3306"
+    env_file:
+      - _docker/env/mysql.env
+    volumes:
+      - ./tmp/mysql:/docker-entrypoint-initdb.d
+
+  mysql_testing:
+    image: mysql:8.0
+    ports:
+      - "3307:3306"
+    env_file:
+      - _docker/env/mysql_testing.env
+    volumes:
+      - ./tmp/mysql_testing:/docker-entrypoint-initdb.d
+
+  phpmyadmin:
+    image: phpmyadmin
+    env_file:
+      - _docker/env/pma.env
+    ports:
+      - "8080:80"
+
+  node:
+    image: node:20-alpine
+    volumes:
+      - ./:/var/www/pribor
+    working_dir: /var/www/pribor
+
+  composer:
+    build:
+      context: .
+      dockerfile: _docker/dockerfiles/composer.Dockerfile
+    volumes:
+      - ./:/var/www/pribor
+
+  artisan:
+    build:
+      context: .
+      dockerfile: _docker/dockerfiles/php.Dockerfile
+    volumes:
+      - ./:/var/www/pribor
+    entrypoint: [ "php", "/var/www/pribor/artisan" ]
